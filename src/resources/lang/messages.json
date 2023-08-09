@@ -1,0 +1,14 @@
+{
+    "auth": {
+      "loginSuccess": "Login successful.",
+      "logoutSuccess": "Logout successful.",
+      "signupSuccess": "Signup successful."
+    },
+    "users": {
+      "insert": "User inserted successfully.",
+      "fetch": "User detail fetched successfully.",
+      "update": "User update successfully.",
+      "fetchAll": "List of users."   
+    }
+  }
+  
