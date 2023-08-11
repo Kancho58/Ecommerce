@@ -34,7 +34,7 @@ export async function save(
     logger.log('info', 'product Inserting');
     const [newProduct] = await trx(Table.PRODUCTS)
       .insert(object.toSnakeCase({ title, price, quantity, userId }))
-      .returning('id');
+      .returning(['id', 'title', 'price', 'quantity']);
 
     logger.log('info', 'Inserting image');
     const { filename, path, mimetype, size } = image;
@@ -52,7 +52,7 @@ export async function save(
 
     logger.log('info', 'Product successfully inserted');
 
-    return object.camelize({ imagePath: path });
+    return object.camelize({ product: newProduct, imagePath: path });
   } catch (err) {
     throw err;
   }
