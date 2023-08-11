@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import * as HttpStatus from 'http-status-codes';
 import * as productServices from '../services/products';
 import { Image, ProductPayload } from '../domains/requests/productPayload';
+import logger from '../utils/logger';
+import BadRequestError from '../exceptions/BadRequestError';
 
 export async function save(
   req: Request,
@@ -9,15 +11,20 @@ export async function save(
   next: NextFunction
 ): Promise<void> {
   try {
-    const productPayload = req.body as ProductPayload;
+    const productPayload = Object.assign({}, req.body as ProductPayload);
     const image = req.file as Image;
 
+    if (!req.file) {
+      throw new BadRequestError('Image should not be empty');
+    }
+
     const product = await productServices.save(
+      res.locals.loggedInPayload.userId,
       productPayload,
-      image,
-      res.locals.loggedInPayload.userId
+      image
     );
 
+    logger.log('info', 'Product created successfully');
     res.status(HttpStatus.StatusCodes.CREATED).json({
       success: true,
       data: product,
@@ -31,7 +38,7 @@ export async function fetch(
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<any> {
+): Promise<void> {
   try {
     const page = Number(req.query.page) || 1;
     const perPage = Number(req.query.perPage || 5);
@@ -43,6 +50,8 @@ export async function fetch(
       perPage,
       offset
     );
+
+    logger.log('info', 'Product fetched');
     res.status(HttpStatus.StatusCodes.OK).json({
       success: true,
       data,
@@ -60,8 +69,15 @@ export async function update(
   try {
     const productPayload = req.body as ProductPayload;
     const id: number = parseInt(req.params.id);
+    const image = (req.file as Image) || '';
 
-    const updatedProduct = await productServices.update(id, productPayload);
+    const updatedProduct = await productServices.update(
+      id,
+      productPayload,
+      image
+    );
+
+    logger.log('info', 'Product updated successfully');
     res.status(HttpStatus.StatusCodes.OK).json({
       success: true,
       data: updatedProduct,

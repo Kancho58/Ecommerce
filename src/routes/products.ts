@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as productControllers from '../controllers/products';
 import * as validate from '../middlwares/validate';
-import { productSchema } from '../validators/product';
+import { productSchema, productUpdateSchema } from '../validators/product';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -29,7 +29,6 @@ const upload = multer({ storage: storage });
 const router = Router();
 
 router.route('/').get(productControllers.fetch);
-router.route('/:id/update').post(productControllers.update);
 
 router.use(authorizeByAdmin);
 router
@@ -38,6 +37,13 @@ router
     upload.single('image'),
     validate.schema(productSchema),
     productControllers.save
+  );
+router
+  .route('/:id/update')
+  .post(
+    upload.single('image'),
+    validate.schema(productUpdateSchema),
+    productControllers.update
   );
 
 export default router;

@@ -1,20 +1,26 @@
 /* eslint-disable no-useless-catch */
 import knex from '../config/knex';
 import logger from '../utils/logger';
-import { Image, ProductPayload } from '../domains/requests/productPayload';
+import {
+  FetchProduct,
+  Image,
+  ProductPayload,
+} from '../domains/requests/productPayload';
 import BadRequestError from '../exceptions/BadRequestError';
 import Table from '../resources/enums/Table';
 import * as object from '../utils/object';
 import { Knex } from 'knex';
 
 export async function save(
+  userId: number,
   productPayload: ProductPayload,
-  image: Image,
-  userId: number
+  image: Image
 ): Promise<ProductPayload> {
   const trx: Knex.Transaction = await knex.transaction();
   try {
     const { title, price, quantity } = productPayload;
+
+    logger.log('info', 'Fetching Product');
 
     const product = await trx(Table.PRODUCTS).where(
       knex.raw('LOWER(title) =?', title.toLowerCase())
@@ -32,7 +38,7 @@ export async function save(
 
     logger.log('info', 'Inserting image');
     const { filename, path, mimetype, size } = image;
-    const productImage = await trx(Table.IMAGES).insert(
+    await trx(Table.IMAGES).insert(
       object.toSnakeCase({
         filename,
         path,
@@ -41,10 +47,6 @@ export async function save(
         productId: newProduct.id,
       })
     );
-
-    // if (!productImage.length) {
-    //   throw new BadRequestError('Image should not be empty');
-    // }
 
     await trx.commit();
 
@@ -61,52 +63,87 @@ export async function fetch(
   page: number,
   perPage: number,
   offset: number
-): Promise<any> {
-  const products = await knex(Table.PRODUCTS)
-    .where(object.toSnakeCase({ userId }))
-    .select('*')
-    .orderBy('id')
-    .limit(perPage)
-    .offset(offset);
-  if (!products.length) {
-    logger.log('info', 'Product not found');
-    throw new BadRequestError('Product not found');
+): Promise<FetchProduct> {
+  try {
+    logger.log('info', 'Fetching Product');
+    const products = await knex(Table.PRODUCTS)
+      .where(object.toSnakeCase({ userId }))
+      .select('products.*', 'images.path as path')
+      .orderBy('id')
+      .limit(perPage)
+      .offset(offset)
+      .crossJoin(knex.raw('images'));
+
+    if (!products.length) {
+      logger.log('info', 'Product not found');
+      throw new BadRequestError('Product not found');
+    }
+
+    logger.log('info', 'Product fetched successfully');
+
+    const data = products.map((product) => ({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      quantity: product.quantity,
+      image: product.path,
+    }));
+
+    return object.camelize({ data, page, perPage });
+  } catch (err) {
+    throw err;
   }
-
-  logger.log('info', 'Product fetched successfully');
-
-  const data = products.map((product) => ({
-    id: product.id,
-    title: product.title,
-    price: product.price,
-    quantity: product.quantity,
-  }));
-  return object.camelize({ data, page, perPage });
 }
 
 export async function update(
   productId: number,
-  productPayload: ProductPayload
+  productPayload: ProductPayload,
+  image: Image
 ): Promise<ProductPayload> {
   try {
-    const { title, price, quantity } = productPayload;
+    const productPermittedParams: string[] = ['title', 'price', 'quantity'];
+    const { filename, path, mimetype, size } = image;
 
     logger.log('info', 'Fetching Product');
 
-    const product = await knex(Table.PRODUCTS).where({ id: productId });
+    let product = await knex(Table.PRODUCTS)
+      .where(object.toSnakeCase({ id: productId }))
+      .select(['id', ...productPermittedParams]);
 
     if (!product.length) {
       logger.log('info', 'Product not found');
       throw new BadRequestError('Product not found');
     }
-    const updatedProduct = await knex(Table.PRODUCTS)
-      .where({ id: productId })
-      .update(object.toSnakeCase({ title, price, quantity }))
-      .returning(['id', 'title', 'price', 'quantity']);
 
+    const productParams = productPermittedParams.reduce(
+      (acc: any, paramKey: string) => {
+        if (productPayload[paramKey as keyof ProductPayload]) {
+          acc[paramKey] = productPayload[paramKey as keyof ProductPayload];
+        }
+        return acc;
+      },
+      {}
+    );
+
+    logger.log('info', 'Updating Product');
+
+    if (Object.keys(productParams).length) {
+      product = await knex(Table.PRODUCTS)
+        .where({ id: productId })
+        .update(object.toSnakeCase(productParams))
+        .returning(['id', ...productPermittedParams]);
+    }
+    logger.log('info', 'Updating Image');
+
+    if (image) {
+      await knex(Table.IMAGES)
+        .where(object.toSnakeCase({ productId }))
+        .returning('path')
+        .update({ filename, path, mimetype, size });
+    }
     logger.log('info', 'Product updated successfully');
 
-    return object.camelize(updatedProduct[0]);
+    return object.camelize({ product: product[0], imagePath: image.path });
   } catch (err) {
     throw err;
   }
