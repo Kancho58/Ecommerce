@@ -38,14 +38,37 @@ export async function fetch(
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<void> {
+): Promise<any> {
   try {
     const page = Number(req.query.page) || 1;
     const perPage = Number(req.query.perPage || 5);
     const offset = perPage * (page - 1);
 
-    const data = await productServices.fetch(
-      res.locals.loggedInPayload.userId,
+    const data = await productServices.fetch(page, perPage, offset);
+
+    logger.log('info', 'Product fetched');
+    res.status(HttpStatus.StatusCodes.OK).json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function fetchByAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const page = Number(req.query.page) || 1;
+    const perPage = Number(req.query.perPage || 5);
+    const offset = perPage * (page - 1);
+    const userId = parseInt(req.params.id);
+
+    const data = await productServices.fetchByAdmin(
+      userId,
       page,
       perPage,
       offset

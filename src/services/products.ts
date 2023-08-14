@@ -59,6 +59,40 @@ export async function save(
 }
 
 export async function fetch(
+  page: number,
+  perPage: number,
+  offset: number
+): Promise<FetchProduct> {
+  try {
+    logger.log('info', 'Fetching Product');
+    const products = await knex(Table.PRODUCTS)
+      .innerJoin('images', 'products.id', 'images.product_id')
+      .select('*', 'images.path as path')
+      .limit(perPage)
+      .offset(offset)
+      .orderBy('products.id', 'asc');
+    if (!products.length) {
+      logger.log('info', 'Product not found');
+      throw new BadRequestError('Product not found');
+    }
+
+    logger.log('info', 'Product fetched successfully');
+
+    const data = products.map((product) => ({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      quantity: product.quantity,
+      image: product.path,
+    }));
+
+    return object.camelize({ data, page, perPage });
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function fetchByAdmin(
   userId: number,
   page: number,
   perPage: number,
@@ -68,11 +102,11 @@ export async function fetch(
     logger.log('info', 'Fetching Product');
     const products = await knex(Table.PRODUCTS)
       .where(object.toSnakeCase({ userId }))
-      .select('products.*', 'images.path as path')
-      .orderBy('id')
+      .innerJoin('images', 'products.id', 'images.product_id')
+      .select('*', 'images.path as path')
       .limit(perPage)
       .offset(offset)
-      .crossJoin(knex.raw('images'));
+      .orderBy('products.id', 'asc');
 
     if (!products.length) {
       logger.log('info', 'Product not found');
