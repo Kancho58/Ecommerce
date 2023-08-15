@@ -31,10 +31,10 @@ const router = Router();
 router.route('/').get(productControllers.fetch);
 
 router.use(authorizeByAdmin);
-router.route('/:id').get(productControllers.fetchByAdmin);
+router.route('/admin').get(productControllers.fetchByAdmin);
 
 router
-  .route('/upload')
+  .route('/create')
   .post(
     upload.single('image'),
     validate.schema(productSchema),

@@ -11,7 +11,7 @@ export async function save(
   next: NextFunction
 ): Promise<void> {
   try {
-    const productPayload = Object.assign({}, req.body as ProductPayload);
+    const productPayload = req.body as ProductPayload;
     const image = req.file as Image;
 
     if (!req.file) {
@@ -65,10 +65,9 @@ export async function fetchByAdmin(
     const page = Number(req.query.page) || 1;
     const perPage = Number(req.query.perPage || 5);
     const offset = perPage * (page - 1);
-    const userId = parseInt(req.params.id);
 
     const data = await productServices.fetchByAdmin(
-      userId,
+      res.locals.loggedInPayload.userId,
       page,
       perPage,
       offset

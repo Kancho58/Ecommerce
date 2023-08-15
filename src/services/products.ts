@@ -67,10 +67,17 @@ export async function fetch(
     logger.log('info', 'Fetching Product');
     const products = await knex(Table.PRODUCTS)
       .innerJoin('images', 'products.id', 'images.product_id')
-      .select('*', 'images.path as path')
+      .select(
+        'products.id',
+        'products.title',
+        'products.price',
+        'products.quantity',
+        'images.path as image'
+      )
       .limit(perPage)
       .offset(offset)
       .orderBy('products.id', 'asc');
+
     if (!products.length) {
       logger.log('info', 'Product not found');
       throw new BadRequestError('Product not found');
@@ -78,15 +85,7 @@ export async function fetch(
 
     logger.log('info', 'Product fetched successfully');
 
-    const data = products.map((product) => ({
-      id: product.id,
-      title: product.title,
-      price: product.price,
-      quantity: product.quantity,
-      image: product.path,
-    }));
-
-    return object.camelize({ data, page, perPage });
+    return { data: products, page, perPage };
   } catch (err) {
     throw err;
   }
@@ -103,7 +102,13 @@ export async function fetchByAdmin(
     const products = await knex(Table.PRODUCTS)
       .where(object.toSnakeCase({ userId }))
       .innerJoin('images', 'products.id', 'images.product_id')
-      .select('*', 'images.path as path')
+      .select(
+        'products.id',
+        'products.title',
+        'products.price',
+        'products.quantity',
+        'images.path as image'
+      )
       .limit(perPage)
       .offset(offset)
       .orderBy('products.id', 'asc');
@@ -115,15 +120,7 @@ export async function fetchByAdmin(
 
     logger.log('info', 'Product fetched successfully');
 
-    const data = products.map((product) => ({
-      id: product.id,
-      title: product.title,
-      price: product.price,
-      quantity: product.quantity,
-      image: product.path,
-    }));
-
-    return object.camelize({ data, page, perPage });
+    return { data: products, page, perPage };
   } catch (err) {
     throw err;
   }
