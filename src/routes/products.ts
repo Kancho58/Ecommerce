@@ -29,15 +29,19 @@ const upload = multer({ storage: storage });
 const router = Router();
 
 router.route('/').get(productControllers.fetch);
-router.route('/:id/update').post(productControllers.update);
 
 router.use(authorizeByAdmin);
+router.route('/admin').get(productControllers.fetchByAdmin);
+
 router
-  .route('/upload')
+  .route('/create')
   .post(
     upload.single('image'),
     validate.schema(productSchema),
     productControllers.save
   );
+router
+  .route('/:id/update')
+  .post(upload.single('image'), productControllers.update);
 
 export default router;

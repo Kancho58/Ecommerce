@@ -10,6 +10,7 @@ const app: Express = express();
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
+app.use('/public', express.static('public'));
 app.use('/ecommerce', routes);
 
 app.use(genericErrorHandler);

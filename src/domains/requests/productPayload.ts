@@ -16,8 +16,16 @@ export interface Image {
   size: number;
 }
 
+interface FetchProductData {
+  id: number;
+  title: string;
+  price: number;
+  quantity: number;
+  image: string;
+}
+
 export interface FetchProduct {
-  data: ProductPayload;
+  data: FetchProductData[];
   page: number;
   perPage: number;
 }

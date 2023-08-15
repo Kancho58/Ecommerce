@@ -30,7 +30,7 @@ export async function login(
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<any> {
+): Promise<void> {
   try {
     const user = req.body as LoginPayload;
 
